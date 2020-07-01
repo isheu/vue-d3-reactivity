@@ -1,6 +1,11 @@
 <template>
   <div id="app">
-    <PackChart :data="loadData" :color-set="colorSet" :size-dim="nodeSizeFn" />
+    <PackChart
+      :data="loadData"
+      :color-set="colorSet"
+      :size-dim="nodeSizeFn"
+      :animate-attr="attrToAnimate"
+    />
     <button @click="changeData">Change Data</button>
     <button @click="changeColor">Change Color</button>
   </div>
@@ -18,6 +23,7 @@ export default {
     return {
       loadData: [],
       colorSet: undefined,
+      attrToAnimate: ['r', 'x', 'y', 'fill'],
       nodeSizeFn: d =>
         d.retweets ? d.retweets.length + d.favorites.length + 1 : 1
     }
@@ -28,9 +34,10 @@ export default {
   methods: {
     changeData() {
       this.loadData = this.loadData.filter((d, i) => i > 3)
+      this.colorSet = ['#c0ffc0', '#cccccc', '#ffc0c0', '#c0c0ff']
     },
     changeColor() {
-      this.colorSet = ['cyan', 'magenta', 'pink', 'purple']
+      this.colorSet = ['#c0ffc0', '#cccccc', '#ffc0c0', '#c0c0ff']
     },
     fetchData() {
       let data = [

@@ -19,6 +19,7 @@
             {{ c.idx }}
           </text>
         </transition-group>
+        <!-- <slot name="no-data"></slot> -->
       </g>
     </svg>
   </div>
@@ -26,7 +27,8 @@
 
 <script>
 import * as d3 from 'd3'
-import { gsap } from 'gsap'
+import anime from 'animejs'
+
 export default {
   name: 'PackChart',
   props: {
@@ -35,11 +37,14 @@ export default {
     width: { type: Number, default: 600 },
     padding: { type: Number, default: 10 },
     sizeDim: { type: Function, default: () => 1 },
-    colorSet: { type: Array, default: () => ['green', 'blue', 'yellow', 'red'] }
+    colorSet: {
+      type: Array,
+      default: () => ['#ff0000', '#00ff00', '#0000ff', '#c181e0']
+    },
+    animateAttr: { type: Array, default: () => ['r', 'x', 'y'] }
   },
   data() {
     return {
-      animateAttr: ['r', 'x', 'y'],
       circles: []
     }
   },
@@ -68,19 +73,21 @@ export default {
         .size([this.contentWidth, this.contentHeight])
         .padding(this.padding)
       return packChart(this.packedData).descendants()
+    },
+    flattenedDataWithFill() {
+      return this.flattenedData.map(d =>
+        Object.assign({}, d, { fill: this.colorScale(d.depth) })
+      )
     }
   },
   watch: {
-    flattenedData() {
+    flattenedDataWithFill() {
       this.transitionFromToData()
     },
-    colorScale() {
-      this.transitionFromToData()
-    }
   },
   methods: {
     transitionFromToData: function() {
-      this.circles = this.flattenedData.map(d => {
+      this.circles = this.flattenedDataWithFill.map(d => {
         let idx = ''
         switch (d.depth) {
           case 0:
@@ -94,29 +101,40 @@ export default {
             break
         }
         const idxMatch = this.circles.findIndex(record => record.idx == idx)
-        const fill = this.colorScale(d.depth)
         let record = {}
         this.animateAttr.forEach(attr => {
-          record[attr] = this.circles[idxMatch]
-            ? this.circles[idxMatch][`to${attr.toUpperCase()}`]
-            : 0
+          if (attr == 'fill') {
+            record[attr] = this.circles[idxMatch]
+              ? this.circles[idxMatch][`to${attr.toUpperCase()}`]
+              : '#c0c0c0'
+          } else {
+            record[attr] = this.circles[idxMatch]
+              ? this.circles[idxMatch][`to${attr.toUpperCase()}`]
+              : 0
+          }
           record[`to${attr.toUpperCase()}`] = d[attr]
         })
-        return Object.assign({}, { fill, idx }, record, { stroke: 'grey' })
+        return Object.assign({}, { idx }, record, { stroke: 'grey' })
       })
-      let fromSpec = {}
-      let toSpec = {}
+      let animateConfig = {
+        targets: this.circles,
+        easing: 'linear',
+        duration: 800
+      }
       this.animateAttr.forEach(attr => {
         try {
-          fromSpec[attr] = (i, d) => d[`${attr}`]
-          toSpec[attr] = (i, d) => d[`to${attr.toUpperCase()}`]
+          animateConfig[attr] = el => [
+            el[`${attr}`],
+            el[`to${attr.toUpperCase()}`]
+          ]
         } catch {
-          console.warn(
-            'Attempted to customize an attribute for animation that is not x, y, or r'
+          console.error(
+            'Indicated an attribute for animation that does not exist'
           )
         }
       })
-      gsap.fromTo(this.circles, fromSpec, toSpec)
+      let animation = anime(animateConfig)
+      animation.play()
     }
   }
 }
